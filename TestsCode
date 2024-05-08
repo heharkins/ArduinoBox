@@ -16,7 +16,7 @@ A4988 stepper(MOTOR_STEPS, DIR, STEP, MS1, MS2, MS3);
 
 // configure the speed of the pump
 #define RPM 36
-#define MICROSTEPS 1
+#define MICROSTEPS 16
 #define FDEGREES 875 // how many steps to rotate in a forward (infusion) direction 
 #define BDEGREES 150 // how many steps to rotate in a backward (withdrawal) direction 
 
@@ -102,7 +102,7 @@ void waiting() {
        command = "";
        reward = false;
        waiting_btn = false;
-       digitalWrite(Enable, LOW);
+       digitalWrite(Enable, HIGH);
     }
     Switchval = digitalRead(Switch); // reads the state of the toggle switch above red push button
     button.update();
@@ -125,8 +125,12 @@ void waiting() {
       }
   } 
   if (Switchval == LOW && button.fell()) {
+    digitalWrite(Enable, LOW);
     delay(10);
+    stepper.enable();
     stepper.rotate(3000);
+    stepper.disable();
+    digitalWrite(Enable, HIGH);
   }
 }
 
@@ -154,7 +158,10 @@ void pumpf() {
   float deviation;  
   if (state != prior_state) {   // If we are entering the state, do initialization stuff
      prior_state = state;
+     digitalWrite(Enable, LOW);
+     stepper.enable();
      stepper.rotate(FDEGREES);
+     stepper.disable();
      delay(10);
      pumpf_time = millis();
      licked = false;
@@ -190,13 +197,14 @@ void pumpb() {
      digitalWrite(REWARDLED, LOW);
      digitalWrite(TOUCHLED, LOW);
      delay(100);
+     stepper.enable();
      stepper.rotate(-BDEGREES);
+     stepper.disable();
      pumpb_time = millis();
   }
   
   t = millis(); 
   if (it_is_time(t, pumpb_time, PUMP_WITHDRAWAL)) {
-     digitalWrite(Enable, HIGH);
      state = WAITING; 
   }
 }
@@ -204,8 +212,8 @@ void pumpb() {
 void setup() {
   // Set target motor RPM to 1RPM and microstepping to 1 (full step mode)
   stepper.begin(RPM, MICROSTEPS);
-  stepper.enable();
-
+  // stepper.setEnableActiveState(LOW);
+  
   button.attach(Pushbut, INPUT_PULLUP); // Attach the debouncer to a pin with INPUT_PULLUP mode
   button.interval(25); // Use a debounce interval of 25 milliseconds
  
